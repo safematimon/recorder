@@ -1,41 +1,52 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Robot Recorder</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>Robot Recorder</h1>
-      <div class="status-badge" id="statusBadge">Ready</div>
-    </header>
-    
-    <main>
-      <div class="controls">
-        <button id="btnRecord" class="btn btn-primary">
-          <span class="icon">●</span> Start Recording
-        </button>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="header-row">
+      <h2>Auto Recorder</h2>
+      <div class="tooltip-container">
+        <div class="tooltip-trigger">💡</div>
+        <div class="tooltip-content">
+          <strong>💡 Recording Shortcuts:</strong>
+          <div>
+            <span class="kbd">Alt</span> + <span class="kbd">S</span> : 📸 Take
+            Screenshot
+          </div>
+          <div>
+            <span class="kbd">Alt</span> + <span class="kbd">W</span> : ⏳ Wait
+            for Text (Highlight first)
+          </div>
+          <div style="margin-top: 5px; color: #888">
+            *Mac users: Use Option instead of Alt
+          </div>
+        </div>
       </div>
+    </div>
 
-      <div class="log-container">
-        <h3>Recorded Steps</h3>
-        <ul id="stepsList" class="steps-list">
-          <li class="empty-state">No actions recorded yet...</li>
-        </ul>
-      </div>
-    </main>
+    <div class="status" id="statusText">🔴 Stopped</div>
 
-    <footer>
-      <div class="actions-group">
-        <button id="btnCopy" class="btn btn-secondary" disabled>Copy</button>
-        <button id="btnDownload" class="btn btn-secondary" disabled>Download .robot</button>
-      </div>
-      <button id="btnClear" class="btn-text">Clear All</button>
-    </footer>
-  </div>
-  <script src="popup.js"></script>
-</body>
+    <div class="toggle-group">
+      <button id="btnRobot" class="toggle-btn active">🤖 Robot</button>
+      <button id="btnPlaywright" class="toggle-btn">🎭 Playwright</button>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn">▶ Start</button>
+      <button id="stopBtn">⏹ Stop</button>
+      <button id="clearBtn">🗑 Clear</button>
+    </div>
+
+    <pre id="scriptDisplay">ยังไม่มีการบันทึก...</pre>
+
+    <div class="copy-container">
+      <span id="copyText">📋 Copy to Clipboard</span>
+    </div>
+
+    <button id="downloadBtn">⬇️ Download File</button>
+
+    <script src="popup.js"></script>
+  </body>
 </html>

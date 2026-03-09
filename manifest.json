@@ -1,17 +1,29 @@
 {
   "manifest_version": 3,
-  "name": "Robot Framework Auto-Recorder",
-  "version": "1.0",
-  "description": "บันทึกการกระทำบนเว็บและสร้างเป็นไฟล์ Robot Framework",
-  "permissions": ["storage", "activeTab", "scripting", "downloads"],
+  "name": "Auto Test Recorder for Robot & Playwright",
+  "short_name": "Auto Recorder",
+  "version": "1.0.0",
+  "description": "Record web interactions and instantly generate automated test scripts for Robot Framework and Playwright.",
+  "permissions": ["storage", "activeTab", "downloads"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Robot Recorder"
+    "default_title": "Open Auto Recorder",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
   ]
 }
