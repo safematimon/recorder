@@ -1,72 +1,41 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
-  <head>
-    <meta charset="UTF-8" />
-    <style>
-      body {
-        width: 350px;
-        padding: 15px;
-        font-family: sans-serif;
-      }
-      .controls {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 10px;
-      }
-      button {
-        padding: 8px 12px;
-        cursor: pointer;
-        border: none;
-        border-radius: 4px;
-        color: white;
-        font-weight: bold;
-        flex-grow: 1;
-      }
-      #startBtn {
-        background: #28a745;
-      }
-      #stopBtn {
-        background: #dc3545;
-        display: none;
-      }
-      #clearBtn {
-        background: #6c757d;
-      }
-      #downloadBtn {
-        background: #007bff;
-        width: 100%;
-        margin-top: 10px;
-      }
-      pre {
-        background: #f8f9fa;
-        padding: 10px;
-        border: 1px solid #ddd;
-        height: 200px;
-        overflow-y: auto;
-        font-size: 12px;
-        white-space: pre-wrap;
-        color: #333;
-      }
-      .status {
-        margin-bottom: 10px;
-        font-weight: bold;
-        font-size: 14px;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>Robot Recorder 🤖</h2>
-    <div class="status" id="statusText">🔴 Stopped</div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Robot Recorder</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Robot Recorder</h1>
+      <div class="status-badge" id="statusBadge">Ready</div>
+    </header>
+    
+    <main>
+      <div class="controls">
+        <button id="btnRecord" class="btn btn-primary">
+          <span class="icon">●</span> Start Recording
+        </button>
+      </div>
 
-    <div class="controls">
-      <button id="startBtn">▶ Start</button>
-      <button id="stopBtn">⏹ Stop</button>
-      <button id="clearBtn">🗑 Clear</button>
-    </div>
+      <div class="log-container">
+        <h3>Recorded Steps</h3>
+        <ul id="stepsList" class="steps-list">
+          <li class="empty-state">No actions recorded yet...</li>
+        </ul>
+      </div>
+    </main>
 
-    <pre id="scriptDisplay">ยังไม่มีการบันทึก...</pre>
-    <button id="downloadBtn">⬇️ Download .robot</button>
-
-    <script src="popup.js"></script>
-  </body>
+    <footer>
+      <div class="actions-group">
+        <button id="btnCopy" class="btn btn-secondary" disabled>Copy</button>
+        <button id="btnDownload" class="btn btn-secondary" disabled>Download .robot</button>
+      </div>
+      <button id="btnClear" class="btn-text">Clear All</button>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
 </html>

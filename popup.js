@@ -1,101 +1,100 @@
-const startBtn = document.getElementById("startBtn");
-const stopBtn = document.getElementById("stopBtn");
-const clearBtn = document.getElementById("clearBtn");
-const downloadBtn = document.getElementById("downloadBtn");
-const scriptDisplay = document.getElementById("scriptDisplay");
-const statusText = document.getElementById("statusText");
+const btnRecord = document.getElementById('btnRecord');
+const btnCopy = document.getElementById('btnCopy');
+const btnDownload = document.getElementById('btnDownload');
+const btnClear = document.getElementById('btnClear');
+const stepsList = document.getElementById('stepsList');
+const statusBadge = document.getElementById('statusBadge');
 
-// อัปเดตหน้าตาปุ่มตามสถานะการอัด
-function updateUI(isRecording) {
-  if (isRecording) {
-    startBtn.style.display = "none";
-    stopBtn.style.display = "block";
-    statusText.innerHTML = "🟢 Recording... (คลิกบนเว็บได้เลย)";
-    statusText.style.color = "#28a745";
-  } else {
-    startBtn.style.display = "block";
-    stopBtn.style.display = "none";
-    statusText.innerHTML = "🔴 Stopped";
-    statusText.style.color = "#dc3545";
-  }
-}
-
-// นำข้อมูลมาแสดงบนหน้าต่าง และใส่ URL ที่บันทึกไว้
-function renderScript() {
-  // ดึงทั้ง steps และ startUrl (ถ้าไม่มีให้ค่าเริ่มต้นเป็น URL ว่างๆ ไว้ก่อน)
-  chrome.storage.local.get(
-    { steps: [], startUrl: "https://example.com" },
-    (data) => {
-      // จัด Format ของ Robot Framework ให้สวยงาม
-      const header = `*** Settings ***
-Library    SeleniumLibrary
-
-*** Variables ***
-\${URL}    ${data.startUrl}
-\${BROWSER}    chrome
-
-*** Test Cases ***
-My Recorded Test
-    Open Browser    \${URL}    \${BROWSER}
-    Maximize Browser Window
-`;
-      const footer = "\n    Close Browser";
-
-      if (data.steps.length === 0) {
-        scriptDisplay.textContent = "ยังไม่มีการบันทึก...";
-      } else {
-        scriptDisplay.textContent = header + data.steps.join("\n") + footer;
-      }
-    },
-  );
-}
-
-// โหลดสถานะเมื่อเปิดหน้า Popup
-chrome.storage.local.get(["isRecording"], (result) => {
-  updateUI(result.isRecording || false);
-  renderScript();
-});
-
-// ฟังคำสั่งเมื่อมี Step เพิ่มเข้ามา ให้รันแสดงผลใหม่ทันที
-chrome.storage.onChanged.addListener((changes) => {
-  if (changes.steps || changes.startUrl) renderScript();
-});
-
-// ตั้งค่าปุ่ม Start: ดึง URL ของแท็บปัจจุบันมาเก็บไว้ด้วย
-startBtn.onclick = () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const currentUrl = tabs[0].url; // ดึง URL ของหน้าเว็บที่กำลังเปิดอยู่
-
-    chrome.storage.local.set(
-      {
-        isRecording: true,
-        startUrl: currentUrl, // บันทึก URL ไว้ใน Storage
-      },
-      () => updateUI(true),
-    );
-  });
+// Helper: สร้างเนื้อหาไฟล์ Robot Framework
+const generateRobotScript = (data) => {
+    const header = `*** Settings ***\nLibrary    SeleniumLibrary\n\n*** Variables ***\n\${URL}    ${data.startUrl || 'https://example.com'}\n\${BROWSER}    chrome\n\n*** Test Cases ***\nMy Recorded Test\n    Open Browser    \${URL}    \${BROWSER}\n    Maximize Browser Window\n`;
+    const footer = "\n    Close Browser";
+    const steps = data.steps ? data.steps.map(s => `    ${s}`).join('\n') : '';
+    return header + steps + footer;
 };
 
-// ตั้งค่าปุ่ม Stop และ Clear
-stopBtn.onclick = () =>
-  chrome.storage.local.set({ isRecording: false }, () => updateUI(false));
-clearBtn.onclick = () => chrome.storage.local.set({ steps: [] }, renderScript);
+// Update UI State
+const updateUI = (isRecording) => {
+    if (isRecording) {
+        btnRecord.innerHTML = '<span class="icon">■</span> Stop Recording';
+        btnRecord.className = 'btn btn-danger';
+        statusBadge.textContent = 'Recording...';
+        statusBadge.classList.add('recording');
+    } else {
+        btnRecord.innerHTML = '<span class="icon">●</span> Start Recording';
+        btnRecord.className = 'btn btn-primary';
+        statusBadge.textContent = 'Ready';
+        statusBadge.classList.remove('recording');
+    }
+};
 
-// ฟังก์ชันสร้างไฟล์ .robot และดาวน์โหลด
-downloadBtn.onclick = () => {
-  const scriptContent = scriptDisplay.textContent;
-  if (scriptContent === "ยังไม่มีการบันทึก...") {
-    alert("ยังไม่มี Step ให้ดาวน์โหลดครับ!");
-    return;
-  }
+// Render List
+const renderSteps = () => {
+    chrome.storage.local.get({ steps: [] }, (data) => {
+        stepsList.innerHTML = '';
+        if (!data.steps || data.steps.length === 0) {
+            stepsList.innerHTML = '<li class="empty-state">No actions recorded yet...</li>';
+            btnDownload.disabled = true;
+            btnCopy.disabled = true;
+        } else {
+            data.steps.forEach(step => {
+                const li = document.createElement('li');
+                li.textContent = step;
+                stepsList.appendChild(li);
+            });
+            btnDownload.disabled = false;
+            btnCopy.disabled = false;
+        }
+    });
+};
 
-  // สร้างไฟล์และบังคับนามสกุลเป็น .robot
-  const blob = new Blob([scriptContent], { type: "application/octet-stream" });
-  const url = URL.createObjectURL(blob);
+// Initialize
+chrome.storage.local.get(['isRecording'], (result) => {
+    updateUI(result.isRecording || false);
+    renderSteps();
+});
 
-  chrome.downloads.download({
-    url: url,
-    filename: "automate_test.robot", // บังคับให้เป็นชื่อนี้
-    saveAs: true, // เปิดหน้าต่างให้เลือกที่ Save (ผู้ใช้จะเห็นนามสกุล .robot ชัดเจน)
-  });
+// Listen for changes
+chrome.storage.onChanged.addListener((changes) => {
+    if (changes.isRecording) updateUI(changes.isRecording.newValue);
+    if (changes.steps) renderSteps();
+});
+
+// Toggle Recording Button
+btnRecord.onclick = () => {
+    chrome.storage.local.get(['isRecording'], (result) => {
+        const isRecording = result.isRecording || false;
+        if (isRecording) {
+            // Stop
+            chrome.storage.local.set({ isRecording: false });
+        } else {
+            // Start
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs.length > 0) {
+                    chrome.storage.local.set({ isRecording: true, startUrl: tabs[0].url }, () => window.close());
+                }
+            });
+        }
+    });
+};
+
+btnClear.onclick = () => chrome.storage.local.set({ steps: [] });
+
+btnCopy.onclick = () => {
+    chrome.storage.local.get({ steps: [], startUrl: "" }, (data) => {
+        const script = generateRobotScript(data);
+        navigator.clipboard.writeText(script);
+        const originalText = btnCopy.textContent;
+        btnCopy.textContent = "Copied!";
+        setTimeout(() => btnCopy.textContent = originalText, 1500);
+    });
+};
+
+btnDownload.onclick = () => {
+    chrome.storage.local.get({ steps: [], startUrl: "" }, (data) => {
+        const script = generateRobotScript(data);
+        const blob = new Blob([script], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        chrome.downloads.download({ url: url, filename: 'robot-test.robot', saveAs: true });
+    });
 };
