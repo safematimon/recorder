@@ -33,10 +33,42 @@
       <button id="btnPlaywright" class="toggle-btn">🎭 Playwright</button>
     </div>
 
+    <div class="settings-section">
+      <div class="settings-header" id="settingsToggle">
+        <span>⚙️ Selector Priority</span>
+        <span id="settingsChevron">▸</span>
+      </div>
+      <div class="settings-body" id="settingsBody">
+        <p class="settings-hint">
+          ลากเพื่อจัดลำดับ • ติ๊กเพื่อเปิด/ปิด • บนสุด = สำคัญสุด
+        </p>
+        <ul id="selectorList"></ul>
+        <div class="add-selector">
+          <input
+            type="text"
+            id="newSelectorInput"
+            placeholder="เพิ่ม attribute เช่น aria-label, placeholder"
+          />
+          <button id="addSelectorBtn" class="add-btn">+ เพิ่ม</button>
+        </div>
+        <div class="settings-footer">
+          <span class="settings-fallback">↳ fallback: //tag</span>
+          <button id="resetOrderBtn" class="link-btn">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+
     <div class="controls">
       <button id="startBtn">▶ Start</button>
       <button id="stopBtn">⏹ Stop</button>
       <button id="clearBtn">🗑 Clear</button>
+    </div>
+
+    <div id="stepsPanel" class="steps-panel">
+      <div class="steps-header">
+        📋 Recorded Steps (<span id="stepsCount">0</span>)
+      </div>
+      <ul id="stepsList"></ul>
     </div>
 
     <pre id="scriptDisplay">ยังไม่มีการบันทึก...</pre>
