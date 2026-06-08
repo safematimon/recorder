@@ -140,25 +140,3 @@ recorder/
 | `downloads` | ดาวน์โหลดไฟล์สคริปต์ที่ generate |
 
 ---
-
-## ⚠️ ข้อจำกัดปัจจุบัน
-
-- **ยังไม่รองรับ iframe** — การคลิกในฟอร์มที่ฝังผ่าน iframe (เช่น Stripe, reCAPTCHA) จะไม่ถูกบันทึก
-- **ยังไม่รองรับ Shadow DOM** — เว็บที่ใช้ Web Components อาจบันทึกได้ไม่ตรงตัว
-- **positional XPath fallback** อาจพังหากโครงสร้างหน้าเปลี่ยน — แต่เป็นทางเลือกสุดท้ายเท่านั้น
-- เหมาะกับการ **ร่าง test** มากกว่าใช้เป็น test สมบูรณ์โดยไม่แก้เลย
-
----
-
-## 🗺️ Roadmap (อนาคต)
-
-- [ ] รองรับ iframe (`all_frames` + frame-aware selector)
-- [ ] รองรับ Shadow DOM (`composedPath()` + selector ที่ทะลุ shadow root)
-- [ ] selector แบบ `class` ที่ถูกต้อง (`.classname`)
-- [ ] แก้ไข step ที่อัดไว้ (ไม่ใช่แค่ลบ)
-
----
-
-## 📜 License
-
-MIT
