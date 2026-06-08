@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Auto Test Recorder for Robot & Playwright",
   "short_name": "Auto Recorder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Record web interactions and instantly generate automated test scripts for Robot Framework and Playwright.",
   "permissions": ["storage", "activeTab", "downloads"],
   "icons": {
