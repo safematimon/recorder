@@ -51,17 +51,6 @@ const applySelectorConfig = (config) => {
   }
 };
 
-chrome.storage.local.get(["isRecording", "selectorConfig"], (result) => {
-  isRecording = result.isRecording || false;
-  applySelectorConfig(result.selectorConfig);
-});
-
-chrome.storage.onChanged.addListener((changes) => {
-  if (changes.isRecording) isRecording = changes.isRecording.newValue;
-  if (changes.selectorConfig)
-    applySelectorConfig(changes.selectorConfig.newValue);
-});
-
 // --- Uniqueness helpers ---
 // Count how many elements a selector matches (CSS, or XPath when it starts //).
 const countMatches = (sel) => {
@@ -109,20 +98,184 @@ const positionalXPath = (el) => {
   return `//${segs.join("/")}`;
 };
 
-// --- Helpers ---
-const getSelectors = (el) => {
-  if (!el || !el.tagName) return { robot: "", pw: "" };
-
-  // Use the first enabled strategy whose selector matches exactly one element.
+// --- Robot/Selenium selector (attribute & XPath engine, configurable) ---
+const robotSelectorOf = (el) => {
+  // First enabled strategy whose selector matches exactly one element.
   for (const key of selectorOrder) {
     const result = buildSelector(el, key);
-    if (result && countMatches(result.pw) === 1) return result;
+    if (result && countMatches(result.pw) === 1) return result.robot;
   }
-
-  // Nothing uniquely identifies the element → positional XPath fallback.
-  const xp = positionalXPath(el);
-  return { robot: `xpath=${xp}`, pw: xp };
+  // Nothing unique → positional XPath fallback.
+  return `xpath=${positionalXPath(el)}`;
 };
+
+// --- Playwright locator (user-facing locators, per Playwright guidance) ---
+// String escaping helpers.
+const jsStr = (s) =>
+  `'${String(s ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, "\\r")
+    .replace(/\n/g, "\\n")}'`;
+
+const cssAttrVal = (s) => String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+
+const cssEscape = (s) => (window.CSS && CSS.escape ? CSS.escape(s) : s);
+
+// Build a valid XPath string literal, even when the value contains quotes.
+const xpathLiteral = (s) => {
+  s = String(s);
+  if (!s.includes('"')) return `"${s}"`;
+  if (!s.includes("'")) return `'${s}'`;
+  return "concat(" + s.split('"').map((p) => `"${p}"`).join(`, '"', `) + ")";
+};
+
+const visibleText = (el) =>
+  (el.innerText || el.textContent || "").trim().replace(/\s+/g, " ");
+
+// Implicit ARIA role for elements whose accessible name is their text.
+const textNamedRole = (el) => {
+  const explicit = el.getAttribute("role");
+  if (explicit) return explicit;
+  const tag = el.tagName.toLowerCase();
+  if (tag === "button") return "button";
+  if (tag === "a" && el.hasAttribute("href")) return "link";
+  if (/^h[1-6]$/.test(tag)) return "heading";
+  return null;
+};
+
+// Resolve the associated label text for a form control.
+const labelTextFor = (el) => {
+  const aria = el.getAttribute("aria-label");
+  if (aria) return aria.trim();
+  const labelledby = el.getAttribute("aria-labelledby");
+  if (labelledby) {
+    const ref = document.getElementById(labelledby);
+    if (ref) return visibleText(ref);
+  }
+  if (el.id) {
+    const lbl = document.querySelector(`label[for="${cssAttrVal(el.id)}"]`);
+    if (lbl) return visibleText(lbl);
+  }
+  const wrap = el.closest?.("label");
+  if (wrap) return visibleText(wrap);
+  return "";
+};
+
+// Each returns { expr, match }: `expr` is the Playwright locator (after
+// `page.`), `match` is a CSS/XPath used to verify it identifies one element.
+const PW_STRATEGIES = {
+  testid: (el) => {
+    const v = el.getAttribute("data-testid");
+    return v
+      ? { expr: `getByTestId(${jsStr(v)})`, match: `[data-testid="${cssAttrVal(v)}"]` }
+      : null;
+  },
+  role: (el) => {
+    const role = textNamedRole(el);
+    if (!role) return null;
+    const name = visibleText(el);
+    if (!name || name.length > 60) return null;
+    const lit = xpathLiteral(name);
+    const explicit = el.getAttribute("role");
+    const match = explicit
+      ? `//*[@role=${xpathLiteral(explicit)}][normalize-space(.)=${lit}]`
+      : `//${el.tagName.toLowerCase()}[normalize-space(.)=${lit}]`;
+    return { expr: `getByRole('${role}', { name: ${jsStr(name)} })`, match };
+  },
+  label: (el) => {
+    const tag = el.tagName.toLowerCase();
+    if (!["input", "textarea", "select"].includes(tag)) return null;
+    const label = labelTextFor(el);
+    if (!label) return null;
+    return {
+      expr: `getByLabel(${jsStr(label)})`,
+      match: `//label[normalize-space(.)=${xpathLiteral(label)}]`,
+    };
+  },
+  placeholder: (el) => {
+    const v = el.getAttribute("placeholder");
+    return v
+      ? { expr: `getByPlaceholder(${jsStr(v)})`, match: `[placeholder="${cssAttrVal(v)}"]` }
+      : null;
+  },
+  alt: (el) => {
+    if (el.tagName.toLowerCase() !== "img") return null;
+    const v = el.getAttribute("alt");
+    return v
+      ? { expr: `getByAltText(${jsStr(v)})`, match: `img[alt="${cssAttrVal(v)}"]` }
+      : null;
+  },
+  text: (el) => {
+    const t = visibleText(el);
+    if (!t || t.length > 40) return null;
+    return {
+      expr: `getByText(${jsStr(t)}, { exact: true })`,
+      match: `//*[normalize-space(.)=${xpathLiteral(t)}]`,
+    };
+  },
+  id: (el) => {
+    if (!isStableId(el)) return null;
+    const sel = `#${cssEscape(el.id)}`;
+    return { expr: `locator(${jsStr(sel)})`, match: sel };
+  },
+};
+
+// Default Playwright priority (highest first); reorder/disable from the popup.
+const DEFAULT_PW_ORDER = [
+  "testid",
+  "role",
+  "label",
+  "placeholder",
+  "alt",
+  "text",
+  "id",
+];
+let pwOrder = [...DEFAULT_PW_ORDER];
+const applyPwConfig = (config) => {
+  if (Array.isArray(config) && config.length) {
+    pwOrder = config
+      .filter((c) => c && c.enabled && PW_STRATEGIES[c.key])
+      .map((c) => c.key);
+  }
+};
+
+const playwrightLocatorOf = (el) => {
+  for (const key of pwOrder) {
+    let r = null;
+    try {
+      r = PW_STRATEGIES[key](el);
+    } catch {
+      r = null;
+    }
+    if (r && countMatches(r.match) === 1) return r.expr;
+  }
+  // anything that selects → positional XPath.
+  return `locator(${jsStr("xpath=" + positionalXPath(el))})`;
+};
+
+// --- Combined ---
+const getSelectors = (el) => {
+  if (!el || !el.tagName) return { robot: "", pw: "" };
+  return { robot: robotSelectorOf(el), pw: playwrightLocatorOf(el) };
+};
+
+// --- Load config from storage (registered after all definitions) ---
+chrome.storage.local.get(
+  ["isRecording", "selectorConfig", "pwSelectorConfig"],
+  (result) => {
+    isRecording = result.isRecording || false;
+    applySelectorConfig(result.selectorConfig);
+    applyPwConfig(result.pwSelectorConfig);
+  },
+);
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.isRecording) isRecording = changes.isRecording.newValue;
+  if (changes.selectorConfig)
+    applySelectorConfig(changes.selectorConfig.newValue);
+  if (changes.pwSelectorConfig) applyPwConfig(changes.pwSelectorConfig.newValue);
+});
 
 const saveStep = (stepObject) => {
   chrome.storage.local.get({ steps: [] }, (data) => {

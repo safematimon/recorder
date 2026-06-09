@@ -35,12 +35,13 @@
 
     <div class="settings-section">
       <div class="settings-header" id="settingsToggle">
-        <span>⚙️ Selector Priority</span>
+        <span>⚙️ Selector Priority (Robot)</span>
         <span id="settingsChevron">▸</span>
       </div>
       <div class="settings-body" id="settingsBody">
         <p class="settings-hint">
-          ลากเพื่อจัดลำดับ • ติ๊กเพื่อเปิด/ปิด • บนสุด = สำคัญสุด
+          ลากเพื่อจัดลำดับ • ติ๊กเพื่อเปิด/ปิด • บนสุด = สำคัญสุด<br />
+          * ใช้กับ Robot/Selenium — ฝั่ง Playwright ใช้ getBy* ในตัว
         </p>
         <ul id="selectorList"></ul>
         <div class="add-selector">
@@ -54,6 +55,24 @@
         <div class="settings-footer">
           <span class="settings-fallback">↳ fallback: //tag</span>
           <button id="resetOrderBtn" class="link-btn">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-header" id="pwSettingsToggle">
+        <span>⚙️ Selector Priority (Playwright)</span>
+        <span id="pwSettingsChevron">▸</span>
+      </div>
+      <div class="settings-body" id="pwSettingsBody">
+        <p class="settings-hint">
+          ลากเพื่อจัดลำดับ • ติ๊กเพื่อเปิด/ปิด • บนสุด = สำคัญสุด<br />
+          * ใช้กับ Playwright (getBy*)
+        </p>
+        <ul id="pwSelectorList"></ul>
+        <div class="settings-footer">
+          <span class="settings-fallback">↳ fallback: locator(xpath)</span>
+          <button id="pwResetOrderBtn" class="link-btn">↺ Reset</button>
         </div>
       </div>
     </div>

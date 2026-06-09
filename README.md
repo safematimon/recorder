@@ -49,30 +49,47 @@
 
 ## 🧠 Smart Selector Engine
 
-หัวใจของ extension คือการเลือก selector ที่ **เสถียรและชี้ถูกตัว** ไม่ใช่ `//div` มั่ว ๆ
+extension เลือก selector ที่ **เสถียรและชี้ถูกตัว** โดยแยก engine ตาม framework — แต่ละฝั่งใช้ locator ที่เป็นสำนวนของตัวเอง
 
-### ลำดับความสำคัญ (ปรับเองได้)
+### Playwright — user-facing locators (ตามที่ Playwright แนะนำ)
 
-| ลำดับ | Strategy | ตัวอย่าง output | หมายเหตุ |
-|------|----------|----------------|----------|
-| 1 | `id` | `#submit` / `id=submit` | ข้าม id ที่มีเลขสุ่ม 4 หลักขึ้นไป |
-| 2 | `data-testid` | `[data-testid="login"]` | มาตรฐานสำหรับ test |
-| 3 | `name` | `[name="email"]` | name ของ form field |
-| 4 | `text` | `//button[contains(text(), 'Login')]` | เฉพาะ `<button>` / `<a>` |
-| fallback | positional XPath | `//*[@id="form"]/button[2]` | ใช้เมื่อไม่มีตัวไหน unique |
+| ลำดับ | เงื่อนไข | ผลลัพธ์ที่ได้ |
+|------|---------|--------------|
+| 1 | มี `data-testid` | `getByTestId('...')` |
+| 2 | มี role + ชื่อ (ปุ่ม/ลิงก์/heading) | `getByRole('button', { name: '...' })` |
+| 3 | input ผูกกับ `<label>` | `getByLabel('...')` |
+| 4 | มี placeholder | `getByPlaceholder('...')` |
+| 5 | รูปมี alt | `getByAltText('...')` |
+| 6 | ข้อความสั้น ๆ | `getByText('...', { exact: true })` |
+| 7 | มี id | `locator('#...')` |
+| 8 | อื่น ๆ (อะไรก็ได้ที่ select ได้) | `locator('xpath=...')` (positional) |
 
-### จุดเด่น
+> ลำดับฝั่ง Playwright ปรับเอง + เปิด/ปิดได้จาก UI (⚙️ Selector Priority (Playwright))
+
+### Robot Framework — attribute & XPath (ปรับลำดับเองได้)
+
+| ลำดับ | Strategy | ผลลัพธ์ที่ได้ | หมายเหตุ |
+|------|----------|--------------|----------|
+| 1 | `id` | `id=submit` | ข้าม id ที่มีเลขสุ่ม 4 หลักขึ้นไป |
+| 2 | `data-testid` | `css=[data-testid="..."]` | มาตรฐานสำหรับ test |
+| 3 | `name` | `css=[name="..."]` | name ของ form field |
+| 4 | `text` | `xpath=//button[contains(text(), '...')]` | เฉพาะ `<button>` / `<a>` |
+| fallback | positional XPath | `xpath=//*[@id="form"]/button[2]` | ใช้เมื่อไม่มีตัวไหน unique |
+
+> ลำดับฝั่ง Robot ปรับเองได้ + เพิ่ม custom attribute (เช่น `aria-label`, `placeholder`) ได้จาก UI (⚙️ Selector Priority)
+
+### จุดเด่นร่วม
 
 - ✅ **เช็ก uniqueness** — ใช้ selector เฉพาะตอนที่ match element **เพียงตัวเดียว**บนหน้า ถ้าไม่ unique จะ fallback เป็น positional XPath ที่การันตีว่าชี้ถูกตัว
-- 🎚️ **ปรับลำดับเองได้** — ลากจัดลำดับ และเปิด/ปิด selector แต่ละแบบผ่าน UI (⚙️ Selector Priority)
-- ➕ **เพิ่ม custom attribute** — เช่น `aria-label`, `placeholder`, หรือ `data-*` ของทีมตัวเอง
-- 🛡️ **escape ปลอดภัย** — ค่าที่มี `'`, ช่องว่างซ้อน ฯลฯ ถูก escape ให้สคริปต์ไม่พัง
+- 🎚️ **ปรับลำดับเองได้ทั้ง 2 engine** — ลากจัดลำดับ และเปิด/ปิด selector แต่ละแบบผ่าน UI แยกกันสำหรับ Robot และ Playwright
+- 🛡️ **escape ปลอดภัย** — ทั้ง selector และค่าที่มี `'`, `"`, ช่องว่างซ้อน ถูก escape ให้สคริปต์ไม่พัง
 
 ---
 
 ## 📄 ตัวอย่าง Output
 
-อัด: เข้าหน้า login → พิมพ์ username/password → กดปุ่ม Login
+อัด: เข้าหน้า login → กรอกอีเมล/รหัสผ่าน → กดปุ่ม Login
+(การอัดเดียวกัน แต่ละ engine ให้ selector คนละสำนวน)
 
 ### Robot Framework
 
@@ -88,8 +105,8 @@ ${BROWSER}    chrome
 My Recorded Test
     Open Browser    ${URL}    ${BROWSER}
     Maximize Browser Window
-    Input Text    css=[data-testid="username"]    john@example.com
-    Input Text    id=password    secret123
+    Input Text    id=email    john@example.com
+    Input Text    css=[name="password"]    secret123
     Click Element    xpath=//button[contains(text(), 'Login')]
     Close Browser
 ```
@@ -102,9 +119,9 @@ import { test, expect } from '@playwright/test';
 test('My Recorded Test', async ({ page }) => {
   await page.goto('https://example.com/login');
 
-  await page.locator('[data-testid="username"]').fill('john@example.com');
-  await page.locator('#password').fill('secret123');
-  await page.locator('//button[contains(text(), \'Login\')]').click();
+  await page.getByLabel('Email address').fill('john@example.com');
+  await page.getByPlaceholder('Password').fill('secret123');
+  await page.getByRole('button', { name: 'Login' }).click();
 });
 ```
 

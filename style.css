@@ -330,7 +330,8 @@ pre {
   color: #868e96;
 }
 
-#selectorList {
+#selectorList,
+#pwSelectorList {
   list-style: none;
   margin: 0;
   padding: 0;
